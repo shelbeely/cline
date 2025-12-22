@@ -195,6 +195,7 @@ export interface ClineSayTool {
 		| "webFetch"
 		| "webSearch"
 		| "summarizeTask"
+		| "generateImage"
 	path?: string
 	diff?: string
 	content?: string

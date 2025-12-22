@@ -224,4 +224,50 @@ export class OpenRouterHandler implements ApiHandler {
 			info: cachedModelInfo || openRouterDefaultModelInfo,
 		}
 	}
+
+	async generateImage(prompt: string): Promise<Buffer> {
+		const client = this.ensureClient()
+		const modelId = this.getModel().id
+
+		try {
+			// For models that support image generation, we need to make a standard completion call
+			// with a prompt requesting image generation
+			const response = await client.chat.completions.create({
+				model: modelId,
+				messages: [
+					{
+						role: "user",
+						content: prompt,
+					},
+				],
+				// Some models might need specific parameters for image generation
+				max_tokens: 1024, // Usually lower for image generation models
+			})
+
+			const content = response.choices[0]?.message?.content
+			if (!content) {
+				throw new Error("No response from image generation model")
+			}
+
+			// Check if the response contains image data
+			// OpenRouter might return image data in different formats depending on the model
+			// For now, we'll need to parse the response and extract image data
+			// This is a placeholder - the actual implementation depends on the specific model's response format
+			
+			// If the model returns a base64 encoded image in the text response
+			const base64Match = content.match(/data:image\/[^;]+;base64,([^\s]+)/)
+			if (base64Match) {
+				return Buffer.from(base64Match[1], "base64")
+			}
+
+			// If the model returns just base64 without the data URL prefix
+			try {
+				return Buffer.from(content, "base64")
+			} catch (e) {
+				throw new Error(`Unable to extract image data from model response. Response: ${content.substring(0, 200)}...`)
+			}
+		} catch (error: any) {
+			throw new Error(`Image generation failed: ${error.message}`)
+		}
+	}
 }

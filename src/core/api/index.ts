@@ -52,6 +52,7 @@ export interface ApiHandler {
 	getModel(): ApiHandlerModel
 	getApiStreamUsage?(): Promise<ApiStreamUsageChunk | undefined>
 	abort?(): void
+	generateImage?(prompt: string): Promise<Buffer>
 }
 
 export interface ApiHandlerModel {

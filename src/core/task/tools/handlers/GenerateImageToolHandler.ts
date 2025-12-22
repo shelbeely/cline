@@ -1,5 +1,5 @@
-import path from "node:path"
 import fs from "fs/promises"
+import path from "path"
 import type { ToolUse } from "@core/assistant-message"
 import { formatResponse } from "@core/prompts/responses"
 import { getWorkspaceBasename, resolveWorkspacePath } from "@core/workspace"
@@ -174,9 +174,14 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 		}
 
 		try {
+			// Check if the API handler supports image generation
+			if (!config.api.generateImage) {
+				return formatResponse.toolError(
+					"The current API provider does not implement image generation. This feature requires a provider that supports generating images.",
+				)
+			}
+
 			// Generate the image using the API
-			// The API will need to handle image generation requests
-			// For now, we'll call a specialized method on the API handler
 			const imageData = await config.api.generateImage(prompt!)
 
 			// Ensure the directory exists
