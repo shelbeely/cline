@@ -115,6 +115,8 @@ const (
 	ToolTypeWebFetch                ToolType = "webFetch"
 	ToolTypeWebSearch               ToolType = "webSearch"
 	ToolTypeSummarizeTask           ToolType = "summarizeTask"
+	ToolTypeGenerateImage           ToolType = "generateImage"
+	ToolTypeEditImage               ToolType = "editImage"
 )
 
 // AskData represents the parsed structure of an ASK message

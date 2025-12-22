@@ -224,4 +224,228 @@ export class OpenRouterHandler implements ApiHandler {
 			info: cachedModelInfo || openRouterDefaultModelInfo,
 		}
 	}
+
+	async generateImage(prompt: string, referenceImages?: string[]): Promise<Buffer> {
+		const client = this.ensureClient()
+		const modelId = this.getModel().id
+
+		try {
+			// Build the message content with optional reference images
+			const messageContent: any[] = [
+				{
+					type: "text",
+					text: prompt,
+				},
+			]
+
+			// If reference images are provided, read and encode them
+			if (referenceImages && referenceImages.length > 0) {
+				const fs = await import("fs/promises")
+				const path = await import("path")
+
+				for (const imagePath of referenceImages) {
+					try {
+						// Read the image file
+						const imageBuffer = await fs.readFile(imagePath)
+						const base64Image = imageBuffer.toString("base64")
+						
+						// Determine the media type from the file extension
+						const ext = path.extname(imagePath).toLowerCase()
+						let mediaType = "image/png"
+						if (ext === ".jpg" || ext === ".jpeg") {
+							mediaType = "image/jpeg"
+						} else if (ext === ".webp") {
+							mediaType = "image/webp"
+						}
+
+						// Add the image to the message content
+						messageContent.push({
+							type: "image_url",
+							image_url: {
+								url: `data:${mediaType};base64,${base64Image}`,
+							},
+						})
+					} catch (error) {
+						console.warn(`Warning: Could not read reference image ${imagePath}:`, error)
+					}
+				}
+			}
+
+			// For models that support image generation, we need to make a standard completion call
+			// with a prompt requesting image generation
+			const response = await client.chat.completions.create({
+				model: modelId,
+				messages: [
+					{
+						role: "user",
+						content: messageContent,
+					},
+				],
+				// Some models might need specific parameters for image generation
+				max_tokens: 1024, // Usually lower for image generation models
+			})
+
+			const content = response.choices[0]?.message?.content
+			if (!content) {
+				throw new Error("No response from image generation model")
+			}
+
+			// Models may return image data in several formats:
+			// 1. Data URL with base64: data:image/png;base64,iVBORw0KGgo...
+			// 2. Just base64 string: iVBORw0KGgo...
+			// 3. URL to generated image (need to fetch)
+			// 4. Structured response with image field
+
+			// Try parsing as data URL (most common for inline image generation)
+			const dataUrlMatch = content.match(/data:image\/[^;]+;base64,([^\s\n\r]+)/i)
+			if (dataUrlMatch) {
+				const base64Data = dataUrlMatch[1]
+				return Buffer.from(base64Data, "base64")
+			}
+
+			// Try parsing as plain URL to an image (Gemini and some models might return this)
+			const urlMatch = content.match(/https?:\/\/[^\s\n\r]+\.(png|jpg|jpeg|webp)/i)
+			if (urlMatch) {
+				const imageUrl = urlMatch[0]
+				// Fetch the image from the URL
+				const imageResponse = await axios.get(imageUrl, {
+					responseType: "arraybuffer",
+					timeout: 30000,
+					...getAxiosSettings(),
+				})
+				return Buffer.from(imageResponse.data)
+			}
+
+			// Try parsing as raw base64 (some models return just the base64 string)
+			// Base64 strings should be relatively long and contain valid base64 characters
+			const cleanedContent = content.trim().replace(/[\s\n\r]/g, "")
+			if (cleanedContent.length > 100 && /^[A-Za-z0-9+/]+=*$/.test(cleanedContent)) {
+				try {
+					return Buffer.from(cleanedContent, "base64")
+				} catch (e) {
+					// Not valid base64, continue to error
+				}
+			}
+
+			// If we reach here, we couldn't parse the response
+			throw new Error(
+				`Unable to extract image data from model response. The model may not support image generation, or returned an unexpected format. Response preview: ${content.substring(0, 200)}...`
+			)
+		} catch (error: any) {
+			throw new Error(`Image generation failed: ${error.message}`)
+		}
+	}
+
+	async editImage(sourcePath: string, prompt: string, referenceImages?: string[]): Promise<Buffer> {
+		const client = this.ensureClient()
+		const modelId = this.getModel().id
+
+		try {
+			// Read the source image
+			const fs = await import("fs/promises")
+			const path = await import("path")
+			
+			const sourceBuffer = await fs.readFile(sourcePath)
+			const base64Source = sourceBuffer.toString("base64")
+			
+			// Determine the media type from the file extension
+			const ext = path.extname(sourcePath).toLowerCase()
+			let mediaType = "image/png"
+			if (ext === ".jpg" || ext === ".jpeg") {
+				mediaType = "image/jpeg"
+			} else if (ext === ".webp") {
+				mediaType = "image/webp"
+			}
+
+			// Build the message content
+			const messageContent: any[] = [
+				{
+					type: "image_url",
+					image_url: {
+						url: `data:${mediaType};base64,${base64Source}`,
+					},
+				},
+				{
+					type: "text",
+					text: `Edit this image: ${prompt}`,
+				},
+			]
+
+			// Add any additional reference images
+			if (referenceImages && referenceImages.length > 0) {
+				for (const imagePath of referenceImages) {
+					try {
+						const imageBuffer = await fs.readFile(imagePath)
+						const base64Image = imageBuffer.toString("base64")
+						
+						const refExt = path.extname(imagePath).toLowerCase()
+						let refMediaType = "image/png"
+						if (refExt === ".jpg" || refExt === ".jpeg") {
+							refMediaType = "image/jpeg"
+						} else if (refExt === ".webp") {
+							refMediaType = "image/webp"
+						}
+
+						messageContent.push({
+							type: "image_url",
+							image_url: {
+								url: `data:${refMediaType};base64,${base64Image}`,
+							},
+						})
+					} catch (error) {
+						console.warn(`Warning: Could not read reference image ${imagePath}:`, error)
+					}
+				}
+			}
+
+			// Make the API call with the source image and edit prompt
+			const response = await client.chat.completions.create({
+				model: modelId,
+				messages: [
+					{
+						role: "user",
+						content: messageContent,
+					},
+				],
+				max_tokens: 1024,
+			})
+
+			const content = response.choices[0]?.message?.content
+			if (!content) {
+				throw new Error("No response from image editing model")
+			}
+
+			// Parse the response using the same logic as generateImage
+			const dataUrlMatch = content.match(/data:image\/[^;]+;base64,([^\s\n\r]+)/i)
+			if (dataUrlMatch) {
+				return Buffer.from(dataUrlMatch[1], "base64")
+			}
+
+			const urlMatch = content.match(/https?:\/\/[^\s\n\r]+\.(png|jpg|jpeg|webp)/i)
+			if (urlMatch) {
+				const imageUrl = urlMatch[0]
+				const imageResponse = await axios.get(imageUrl, {
+					responseType: "arraybuffer",
+					timeout: 30000,
+					...getAxiosSettings(),
+				})
+				return Buffer.from(imageResponse.data)
+			}
+
+			const cleanedContent = content.trim().replace(/[\s\n\r]/g, "")
+			if (cleanedContent.length > 100 && /^[A-Za-z0-9+/]+=*$/.test(cleanedContent)) {
+				try {
+					return Buffer.from(cleanedContent, "base64")
+				} catch (e) {
+					// Not valid base64, continue to error
+				}
+			}
+
+			throw new Error(
+				`Unable to extract edited image data from model response. Response preview: ${content.substring(0, 200)}...`
+			)
+		} catch (error: any) {
+			throw new Error(`Image editing failed: ${error.message}`)
+		}
+	}
 }

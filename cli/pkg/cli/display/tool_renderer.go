@@ -184,6 +184,22 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 			return "### Cline condensed the conversation"
 		}
 
+	case string(types.ToolTypeGenerateImage):
+		if verbTense == "wants to" {
+			action = "wants to generate an image at"
+		} else {
+			action = "is generating an image at"
+		}
+		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+
+	case string(types.ToolTypeEditImage):
+		if verbTense == "wants to" {
+			action = "wants to edit an image and save to"
+		} else {
+			action = "is editing an image and saving to"
+		}
+		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+
 	default:
 		if verbTense == "wants to" {
 			verb = "wants to use"
@@ -215,8 +231,20 @@ func (tr *ToolRenderer) GenerateToolContentPreview(tool *types.ToolMessage) stri
 		previewMd := fmt.Sprintf("```\n%s\n```", preview)
 		return tr.renderMarkdown(previewMd)
 
-	case string(types.ToolTypeReadFile), string(types.ToolTypeWebFetch), string(types.ToolTypeWebSearch), string(types.ToolTypeFileDeleted):
-		// No preview for read/fetch/search operations
+	case string(types.ToolTypeReadFile), string(types.ToolTypeWebFetch), string(types.ToolTypeWebSearch), string(types.ToolTypeFileDeleted), string(types.ToolTypeGenerateImage), string(types.ToolTypeEditImage):
+		// No preview for read/fetch/search/generateImage/editImage operations (or show the prompt/content)
+		// For generateImage and editImage, we show the prompt/edits as a preview
+		if (tool.Tool == string(types.ToolTypeGenerateImage) || tool.Tool == string(types.ToolTypeEditImage)) && tool.Content != "" {
+			preview := strings.TrimSpace(tool.Content)
+			if len(preview) > 200 {
+				preview = preview[:200] + "..."
+			}
+			if tool.Tool == string(types.ToolTypeGenerateImage) {
+				return fmt.Sprintf("Image description: %s", preview)
+			} else {
+				return fmt.Sprintf("Edit instructions: %s", preview)
+			}
+		}
 		return ""
 
 	default:
