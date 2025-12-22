@@ -1,8 +1,11 @@
-# Image Generation Support for Cline
+# Image Generation and Editing Support for Cline
 
 ## Overview
 
-Cline now supports autonomous image generation using models that have image generation capabilities. This allows Cline to create visual assets like logos, banners, icons, and illustrations automatically as part of completing tasks.
+Cline now supports autonomous image generation and editing using models that have these capabilities. This allows Cline to:
+- Create visual assets like logos, banners, icons, and illustrations automatically
+- Use existing images (logos, color palettes) as references to maintain brand consistency
+- Edit existing images based on text instructions
 
 ### Supported Models
 
@@ -17,6 +20,8 @@ The **Nano Banana Pro** model (`google/gemini-3-pro-image-preview` on OpenRouter
 - **Creative controls**: Fine-grained adjustments for lighting, focus, and camera transformations
 - **Flexible aspect ratios**: Support for various dimension requirements
 - **Search grounding**: Real-time information integration for context-rich graphics
+- **Image editing**: Localized edits, lighting adjustments, and style transformations
+- **Reference image support**: Use existing images to guide generation and maintain brand consistency
 
 **Ideal For:**
 - Professional design and product visualization
@@ -25,6 +30,8 @@ The **Nano Banana Pro** model (`google/gemini-3-pro-image-preview` on OpenRouter
 - Complex multi-element compositions
 - Landing pages with text-rich banners
 - Marketing materials requiring precise branding
+- Brand-consistent asset generation using logos and color palettes
+- Iterative design workflows (generate, then edit based on feedback)
 
 ## Requirements
 
@@ -40,8 +47,10 @@ When you use a model that supports image generation, Cline can autonomously:
 
 1. **Detect** when visual assets are needed
 2. **Generate** images based on detailed prompts
-3. **Save** generated images to your workspace
-4. **Reference** those images in code or documentation
+3. **Use reference images** (like your logo or color palette) to maintain brand consistency
+4. **Edit existing images** based on text instructions
+5. **Save** generated/edited images to your workspace
+6. **Reference** those images in code or documentation
 
 ## Example Usage
 
@@ -57,6 +66,31 @@ Cline will:
 3. Save the image (e.g., `assets/hero-banner.png`)
 4. Include the image in the landing page HTML/CSS
 
+### Example with Brand References (NEW)
+```
+Create a landing page using my company logo (assets/brand-logo.png) and color 
+palette (assets/palette.png). Generate a hero banner (1920x600px) and feature 
+icons (64x64px each, 4 icons) that match our brand style.
+```
+
+Cline will:
+1. Generate hero banner using logo and palette as style references
+2. Create feature icons maintaining the same brand colors and style
+3. Build landing page with all generated brand-consistent assets
+4. All generated images follow the visual theme from reference images
+
+### Example with Image Editing (NEW)
+```
+Edit the hero banner at assets/hero-banner.png - change the background to navy 
+blue and increase the logo brightness by 20%. Save as assets/hero-banner-v2.png
+```
+
+Cline will:
+1. Load the existing image
+2. Call the `edit_image` tool with editing instructions
+3. Apply the specified changes (background color, brightness)
+4. Save the edited version
+
 ### Advanced Example with Multiple Assets
 ```
 Build a product showcase page with:
@@ -64,13 +98,14 @@ Build a product showcase page with:
 - Product screenshots (1280x800px, showing a dashboard interface)
 - Icon set for features section (64x64px each, 8 icons total)
 
+Use assets/brand-colors.png as reference to maintain color consistency.
 Start from scratch and generate all assets with proper dimensions.
 ```
 
 Cline will:
-1. Generate the logo as `assets/logo.png` (512x512px)
+1. Generate the logo as `assets/logo.png` (512x512px) using brand colors reference
 2. Create product screenshots with specified dimensions
-3. Generate feature icons at 64x64px each
+3. Generate feature icons at 64x64px each with consistent branding
 4. Build the complete page referencing all generated assets
 
 ## Specifying Image Dimensions
@@ -288,13 +323,131 @@ depth of field focusing on the foreground buildings, professional
 photography style with film grain texture.
 ```
 
+## Using Reference Images for Brand Consistency (NEW)
+
+Reference images allow you to maintain brand consistency across all generated assets by using existing images (logos, color palettes, style guides) as visual references.
+
+### How It Works
+
+1. **Provide existing images** as references (e.g., your logo, color palette)
+2. **Model analyzes** the reference images for colors, style, and composition
+3. **Generated images** match the visual style and branding from references
+4. **Maintain consistency** across all assets automatically
+
+### Example Workflows
+
+**Basic Brand Consistency:**
+```
+"Generate a hero banner (1920x600px) for our product launch. Use 
+assets/brand-logo.png as a style reference to match our brand colors."
+```
+
+**Multiple Reference Images:**
+```
+"Create a set of 8 feature icons (64x64px each). Use assets/logo.png 
+and assets/color-palette.png as references to maintain our brand identity."
+```
+
+**Complex Compositions:**
+```
+"Generate a product showcase banner (2560x1440px) featuring our three 
+main products. Use assets/brand-guidelines.png to match our visual style 
+and assets/product-photos/sample.jpg for the product photography style."
+```
+
+### Best Practices for Reference Images
+
+1. **Use high-quality references**: Clear, well-lit images work best
+2. **Multiple references**: Combine logo + color palette for better results
+3. **Consistent style**: Use references that represent your desired aesthetic
+4. **File organization**: Keep reference images in a dedicated folder (e.g., `assets/brand/`)
+
+### Supported Reference Image Formats
+- PNG (recommended for logos with transparency)
+- JPG/JPEG (good for photos and complex images)
+- WebP (modern format with good compression)
+
+## Image Editing Capabilities (NEW)
+
+Edit existing images with text instructions using the `edit_image` tool. Perfect for iterative design workflows and making adjustments to generated or existing images.
+
+### What You Can Edit
+
+**Color Adjustments:**
+- Change background colors
+- Adjust brightness, contrast, saturation
+- Apply color grading
+
+**Content Modifications:**
+- Add or remove elements
+- Reposition objects
+- Change text content
+
+**Style Transformations:**
+- Apply filters or effects
+- Adjust lighting and shadows
+- Modify focus and depth of field
+
+**Localized Edits (Nano Banana Pro):**
+- Edit specific regions only
+- Fine-grained lighting adjustments
+- Precise color changes
+
+### Example Edit Operations
+
+**Simple Color Change:**
+```
+"Edit assets/banner.png - change the background from white to navy blue. 
+Save as assets/banner-blue.png"
+```
+
+**Brightness Adjustment:**
+```
+"Edit assets/logo.png - increase overall brightness by 25% and enhance 
+contrast. Save as assets/logo-bright.png"
+```
+
+**Content Modification:**
+```
+"Edit assets/hero-banner.png - replace the text 'Coming Soon' with 
+'Now Available' in the same font and style. Save as assets/hero-updated.png"
+```
+
+**Complex Edit with References:**
+```
+"Edit assets/product-shot.png - change the product color to match the 
+blue from assets/brand-colors.png, and adjust lighting to be softer. 
+Save as assets/product-shot-blue.png"
+```
+
+### Iterative Design Workflow
+
+1. **Generate** initial asset with specific requirements
+2. **Review** the generated image
+3. **Edit** to refine based on feedback
+4. **Repeat** editing as needed for perfect results
+
+Example:
+```
+Step 1: "Generate a logo (512x512px) with a robot theme"
+→ assets/logo-v1.png created
+
+Step 2: "Edit assets/logo-v1.png - make the robot's eyes brighter blue. 
+         Save as assets/logo-v2.png"
+→ Adjusted version created
+
+Step 3: "Edit assets/logo-v2.png - add a subtle shadow effect. 
+         Save as assets/logo-final.png"
+→ Final version ready
+```
+
 ## Limitations
 
 ### General Limitations
 - Image generation quality depends on the model's capabilities
-- Generated images use API credits (check your provider's pricing)
-- Large or complex images may take longer to generate
-- The model must explicitly choose to use the tool (autonomous decision)
+- Generated/edited images use API credits (check your provider's pricing)
+- Large or complex images may take longer to process
+- The model must explicitly choose to use the tools (autonomous decision)
 
 ### Model-Specific Capabilities
 
@@ -305,24 +458,24 @@ photography style with film grain texture.
 - ✅ Fine-grained creative controls (lighting, focus, camera)
 - ✅ Search grounding for real-time information
 - ✅ Professional-grade design workflows
+- ✅ Reference image support for brand consistency
+- ✅ Advanced image editing with localized controls
 
 **Other Models:**
 - May have lower maximum resolution limits
 - Text rendering in images may be less accurate
 - Limited multi-element composition capabilities
 - Fewer creative control options
-- Generated images use API credits (check your provider's pricing)
-- Large or complex images may take longer to generate
-- The model must explicitly choose to use the tool (autonomous decision)
+- May not support reference images or editing
 
 ## Future Enhancements
 
 Potential improvements being considered:
 - Support for more providers (Anthropic, OpenAI DALL-E, etc.)
-- Image editing capabilities (modify existing images)
 - Batch generation for multiple assets
-- Style consistency across generations
+- Style consistency profiles
 - Image-to-image transformations
+- Advanced masking and selection tools
 
 ## Feedback
 
