@@ -15,33 +15,34 @@ import type { TaskConfig } from "../types/TaskConfig"
 import type { StronglyTypedUIHelpers } from "../types/UIHelpers"
 import { ToolResultUtils } from "../utils/ToolResultUtils"
 
-export class GenerateImageToolHandler implements IFullyManagedTool {
-	readonly name = ClineDefaultTool.GENERATE_IMAGE
+export class EditImageToolHandler implements IFullyManagedTool {
+	readonly name = ClineDefaultTool.EDIT_IMAGE
 
 	constructor(private validator: ToolValidator) {}
 
 	getDescription(block: ToolUse): string {
-		return `[${block.name} for '${block.params.path}']`
+		return `[${block.name} from '${block.params.source_path}' to '${block.params.output_path}']`
 	}
 
 	async handlePartialBlock(block: ToolUse, uiHelpers: StronglyTypedUIHelpers): Promise<void> {
-		const relPath = block.params.path
+		const sourcePath = block.params.source_path
+		const outputPath = block.params.output_path
 		const prompt = block.params.prompt || ""
 
 		const config = uiHelpers.getConfig()
 
 		// Create and show partial UI message
 		const sharedMessageProps = {
-			tool: "generateImage",
-			path: getReadablePath(config.cwd, uiHelpers.removeClosingTag(block, "path", relPath)),
-			content: uiHelpers.removeClosingTag(block, "prompt", prompt),
-			operationIsLocatedInWorkspace: await isLocatedInWorkspace(relPath),
+			tool: "editImage",
+			path: getReadablePath(config.cwd, uiHelpers.removeClosingTag(block, "output_path", outputPath)),
+			content: `Source: ${getReadablePath(config.cwd, uiHelpers.removeClosingTag(block, "source_path", sourcePath))}\nEdits: ${uiHelpers.removeClosingTag(block, "prompt", prompt)}`,
+			operationIsLocatedInWorkspace: await isLocatedInWorkspace(outputPath),
 		}
 
 		const partialMessage = JSON.stringify(sharedMessageProps)
 
 		// Handle auto-approval vs manual approval for partial
-		if (await uiHelpers.shouldAutoApproveToolWithPath(block.name, relPath)) {
+		if (await uiHelpers.shouldAutoApproveToolWithPath(block.name, outputPath)) {
 			await uiHelpers.removeLastPartialMessageIfExistsWithType("ask", "tool")
 			await uiHelpers.say("tool", partialMessage, undefined, undefined, block.partial)
 		} else {
@@ -51,7 +52,8 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 	}
 
 	async execute(config: TaskConfig, block: ToolUse): Promise<ToolResponse> {
-		const relPath: string | undefined = block.params.path
+		const sourcePath: string | undefined = block.params.source_path
+		const outputPath: string | undefined = block.params.output_path
 		const prompt: string | undefined = block.params.prompt
 		const referenceImages: string[] | undefined = block.params.reference_images
 
@@ -60,19 +62,25 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 		const currentMode = config.services.stateManager.getGlobalSettingsKey("mode")
 		const provider = (currentMode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider) as string
 
-		// Check if model supports image generation
+		// Check if model supports image generation/editing
 		const modelInfo = config.api.getModel().info
 		if (!modelInfo.supportsImageGeneration) {
 			return formatResponse.toolError(
-				"The current model does not support image generation. Please use a model that supports image output (e.g., models with image generation capabilities on OpenRouter).",
+				"The current model does not support image editing. Please use a model that supports image generation/editing (e.g., models with image generation capabilities on OpenRouter).",
 			)
 		}
 
 		// Validate required parameters
-		const pathValidation = this.validator.assertRequiredParams(block, "path")
-		if (!pathValidation.ok) {
+		const sourcePathValidation = this.validator.assertRequiredParams(block, "source_path")
+		if (!sourcePathValidation.ok) {
 			config.taskState.consecutiveMistakeCount++
-			return await config.callbacks.sayAndCreateMissingParamError(this.name, "path")
+			return await config.callbacks.sayAndCreateMissingParamError(this.name, "source_path")
+		}
+
+		const outputPathValidation = this.validator.assertRequiredParams(block, "output_path")
+		if (!outputPathValidation.ok) {
+			config.taskState.consecutiveMistakeCount++
+			return await config.callbacks.sayAndCreateMissingParamError(this.name, "output_path")
 		}
 
 		const promptValidation = this.validator.assertRequiredParams(block, "prompt")
@@ -81,20 +89,35 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 			return await config.callbacks.sayAndCreateMissingParamError(this.name, "prompt")
 		}
 
-		// Validate file extension
+		// Validate file extensions
 		const validExtensions = [".png", ".jpg", ".jpeg", ".webp"]
-		const ext = path.extname(relPath!).toLowerCase()
-		if (!validExtensions.includes(ext)) {
+		const sourceExt = path.extname(sourcePath!).toLowerCase()
+		const outputExt = path.extname(outputPath!).toLowerCase()
+		
+		if (!validExtensions.includes(sourceExt)) {
 			return formatResponse.toolError(
-				`Invalid file extension '${ext}'. Image path must end with one of: ${validExtensions.join(", ")}`,
+				`Invalid source file extension '${sourceExt}'. Image path must end with one of: ${validExtensions.join(", ")}`,
+			)
+		}
+		
+		if (!validExtensions.includes(outputExt)) {
+			return formatResponse.toolError(
+				`Invalid output file extension '${outputExt}'. Image path must end with one of: ${validExtensions.join(", ")}`,
 			)
 		}
 
-		// Check clineignore access
-		const accessValidation = this.validator.checkClineIgnorePath(relPath!)
-		if (!accessValidation.ok) {
-			await config.callbacks.say("clineignore_error", relPath)
-			return formatResponse.toolError(formatResponse.clineIgnoreError(relPath!))
+		// Check clineignore access for source
+		const sourceAccessValidation = this.validator.checkClineIgnorePath(sourcePath!)
+		if (!sourceAccessValidation.ok) {
+			await config.callbacks.say("clineignore_error", sourcePath)
+			return formatResponse.toolError(formatResponse.clineIgnoreError(sourcePath!))
+		}
+
+		// Check clineignore access for output
+		const outputAccessValidation = this.validator.checkClineIgnorePath(outputPath!)
+		if (!outputAccessValidation.ok) {
+			await config.callbacks.say("clineignore_error", outputPath)
+			return formatResponse.toolError(formatResponse.clineIgnoreError(outputPath!))
 		}
 
 		// Validate and resolve reference images if provided
@@ -109,7 +132,7 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 				}
 
 				// Resolve the reference image path
-				const refPathResult = resolveWorkspacePath(config, refPath, "GenerateImageToolHandler.execute")
+				const refPathResult = resolveWorkspacePath(config, refPath, "EditImageToolHandler.execute")
 				const refAbsolutePath =
 					typeof refPathResult === "string" ? refPathResult : refPathResult.absolutePath
 
@@ -125,17 +148,31 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 
 		config.taskState.consecutiveMistakeCount = 0
 
-		// Resolve the absolute path based on multi-workspace configuration
-		const pathResult = resolveWorkspacePath(config, relPath!, "GenerateImageToolHandler.execute")
-		const { absolutePath, displayPath } =
-			typeof pathResult === "string" ? { absolutePath: pathResult, displayPath: relPath! } : pathResult
+		// Resolve the absolute paths based on multi-workspace configuration
+		const sourcePathResult = resolveWorkspacePath(config, sourcePath!, "EditImageToolHandler.execute")
+		const sourceAbsolutePath =
+			typeof sourcePathResult === "string" ? sourcePathResult : sourcePathResult.absolutePath
+		const sourceDisplayPath = typeof sourcePathResult === "string" ? sourcePath! : sourcePathResult.displayPath
+
+		const outputPathResult = resolveWorkspacePath(config, outputPath!, "EditImageToolHandler.execute")
+		const { absolutePath: outputAbsolutePath, displayPath: outputDisplayPath } =
+			typeof outputPathResult === "string"
+				? { absolutePath: outputPathResult, displayPath: outputPath! }
+				: outputPathResult
+
+		// Check if source image exists
+		try {
+			await fs.access(sourceAbsolutePath)
+		} catch (error) {
+			return formatResponse.toolError(`Source image not found: ${sourceDisplayPath}`)
+		}
 
 		// Create message for approval
 		const sharedMessageProps: ClineSayTool = {
-			tool: "generateImage",
-			path: displayPath,
-			content: prompt!,
-			operationIsLocatedInWorkspace: await isLocatedInWorkspace(absolutePath),
+			tool: "editImage",
+			path: outputDisplayPath,
+			content: `Source: ${sourceDisplayPath}\nEdits: ${prompt}`,
+			operationIsLocatedInWorkspace: await isLocatedInWorkspace(outputAbsolutePath),
 		}
 		const completeMessage = JSON.stringify(sharedMessageProps)
 
@@ -145,7 +182,7 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 			await config.callbacks.say("tool", completeMessage, undefined, undefined, false)
 			telemetryService.captureToolUsage(
 				config.ulid,
-				"generate_image",
+				"edit_image",
 				config.api.getModel().id,
 				provider,
 				true,
@@ -156,7 +193,7 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 		} else {
 			// Manual approval flow
 			showNotificationForApproval(
-				`Cline wants to generate an image at ${displayPath}`,
+				`Cline wants to edit an image and save to ${outputDisplayPath}`,
 				config.autoApprovalSettings.enableNotifications,
 			)
 			await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
@@ -201,32 +238,32 @@ export class GenerateImageToolHandler implements IFullyManagedTool {
 		}
 
 		try {
-			// Check if the API handler supports image generation
-			if (!config.api.generateImage) {
+			// Check if the API handler supports image editing
+			if (!config.api.editImage) {
 				return formatResponse.toolError(
-					"The current API provider does not implement image generation. This feature requires a provider that supports generating images.",
+					"The current API provider does not implement image editing. This feature requires a provider that supports editing images.",
 				)
 			}
 
-			// Generate the image using the API, passing reference images if provided
-			const imageData = await config.api.generateImage(prompt!, resolvedReferenceImages)
+			// Edit the image using the API, passing reference images if provided
+			const editedImageData = await config.api.editImage(sourceAbsolutePath, prompt!, resolvedReferenceImages)
 
-			// Ensure the directory exists
-			const directory = path.dirname(absolutePath)
+			// Ensure the output directory exists
+			const directory = path.dirname(outputAbsolutePath)
 			await fs.mkdir(directory, { recursive: true })
 
-			// Save the image
-			await fs.writeFile(absolutePath, imageData)
+			// Save the edited image
+			await fs.writeFile(outputAbsolutePath, editedImageData)
 
 			// Return success message with the path
-			let successMessage = `Successfully generated image and saved to: ${displayPath}\nThe image has been created based on your prompt: "${prompt}"`
+			let successMessage = `Successfully edited image and saved to: ${outputDisplayPath}\nSource: ${sourceDisplayPath}\nEdits applied: "${prompt}"`
 			if (resolvedReferenceImages && resolvedReferenceImages.length > 0) {
 				successMessage += `\nUsed ${resolvedReferenceImages.length} reference image(s) for style guidance.`
 			}
 			return formatResponse.toolResult(successMessage)
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
-			return formatResponse.toolError(`Failed to generate image: ${errorMessage}`)
+			return formatResponse.toolError(`Failed to edit image: ${errorMessage}`)
 		}
 	}
 }

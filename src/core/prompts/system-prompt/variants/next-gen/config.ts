@@ -66,6 +66,7 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 		ClineDefaultTool.TODO,
 		ClineDefaultTool.GENERATE_EXPLANATION,
 		ClineDefaultTool.GENERATE_IMAGE,
+		ClineDefaultTool.EDIT_IMAGE,
 	)
 	.placeholders({
 		MODEL_FAMILY: ModelFamily.NEXT_GEN,

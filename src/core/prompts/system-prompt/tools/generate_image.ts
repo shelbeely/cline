@@ -9,6 +9,7 @@ const GENERIC: ClineToolSpec = {
 	name: "generate_image",
 	description: `Generates an image based on a text prompt and saves it to a file
 - Takes a description and file path as input
+- Optionally takes reference images (like logos, palette samples) to guide generation
 - Generates an image using AI image generation capabilities
 - Saves the generated image to the specified file path
 - Returns the path to the saved image file
@@ -18,6 +19,7 @@ const GENERIC: ClineToolSpec = {
 - Include specific sizing requirements for proper image generation
 - For models like Nano Banana Pro: Can request 2K/4K outputs, text rendering in images, lighting controls, and multi-element compositions
 - Advanced features: Specify lighting ("soft studio lighting"), text overlays ("with title 'Welcome' in bold"), camera angles ("low-angle perspective"), and creative controls
+- Reference images: Provide paths to existing images (logos, color palettes) to maintain brand consistency
 - The file path should end with an image extension (.png, .jpg, .jpeg, .webp)
 - If the file already exists, it will be overwritten
 - This tool is only available when using a model that supports image generation (check model capabilities)`,
@@ -35,6 +37,12 @@ const GENERIC: ClineToolSpec = {
 			instruction: "The file path where the generated image should be saved (relative to workspace root)",
 			usage: "assets/logo.png",
 		},
+		{
+			name: "reference_images",
+			required: false,
+			instruction: "Optional array of file paths to existing images (logos, palettes, style references) to guide the generation and maintain consistency",
+			usage: '["assets/brand-logo.png", "assets/color-palette.png"]',
+		},
 		TASK_PROGRESS_PARAMETER,
 	],
 }
@@ -43,7 +51,7 @@ const NATIVE_NEXT_GEN: ClineToolSpec = {
 	variant: ModelFamily.NATIVE_NEXT_GEN,
 	id: ClineDefaultTool.GENERATE_IMAGE,
 	name: "generate_image",
-	description: "Generates an image from a text prompt and saves it to a file. Always include specific dimensions (e.g., 1920x1080px, 512x512px, 3840x2160px for 4K). For advanced models like Nano Banana Pro, you can specify text overlays, lighting controls, and creative adjustments.",
+	description: "Generates an image from a text prompt and saves it to a file. Always include specific dimensions (e.g., 1920x1080px, 512x512px, 3840x2160px for 4K). Optionally provide reference images for brand consistency. For advanced models like Nano Banana Pro, you can specify text overlays, lighting controls, and creative adjustments.",
 	contextRequirements: (context) => context.modelInfo.supportsImageGeneration === true,
 	parameters: [
 		{
@@ -55,6 +63,11 @@ const NATIVE_NEXT_GEN: ClineToolSpec = {
 			name: "path",
 			required: true,
 			instruction: "File path to save the image (relative to workspace)",
+		},
+		{
+			name: "reference_images",
+			required: false,
+			instruction: "Optional array of paths to existing images for style/brand guidance",
 		},
 		TASK_PROGRESS_PARAMETER,
 	],
