@@ -4,13 +4,35 @@
 
 Cline now supports autonomous image generation using models that have image generation capabilities. This allows Cline to create visual assets like logos, banners, icons, and illustrations automatically as part of completing tasks.
 
+### Supported Models
+
+#### Google Gemini 3 Pro - Nano Banana Pro (Recommended)
+The **Nano Banana Pro** model (`google/gemini-3-pro-image-preview` on OpenRouter) is Google's most advanced image-generation model, offering:
+
+**Professional Features:**
+- **High-resolution outputs**: 2K and 4K image generation
+- **Advanced text rendering**: Industry-leading text-in-image with multilingual support and long passages
+- **Multi-element compositions**: Consistent blending across multiple images
+- **Identity preservation**: Accurate preservation across up to 5 subjects
+- **Creative controls**: Fine-grained adjustments for lighting, focus, and camera transformations
+- **Flexible aspect ratios**: Support for various dimension requirements
+- **Search grounding**: Real-time information integration for context-rich graphics
+
+**Ideal For:**
+- Professional design and product visualization
+- Infographics and diagrams with text overlays
+- Storyboarding and cinematic composites
+- Complex multi-element compositions
+- Landing pages with text-rich banners
+- Marketing materials requiring precise branding
+
 ## Requirements
 
 1. **Model Support**: Use a model that supports image generation
+   - **Recommended**: `google/gemini-3-pro-image-preview` (Nano Banana Pro)
    - Look for models with "image" in their `output_modalities` on OpenRouter
-   - Examples: Models with image generation capabilities on OpenRouter
    
-2. **API Access**: Valid API credentials for your chosen provider
+2. **API Access**: Valid API credentials for your chosen provider (OpenRouter recommended)
 
 ## How It Works
 
@@ -55,7 +77,7 @@ Cline will:
 
 **Always include dimensions in your requests** for best results. The model will pass dimensions in the prompt parameter.
 
-### Common Dimension Examples:
+### Standard Dimension Examples:
 - **Logos**: 512x512px, 256x256px, 128x128px
 - **Icons**: 64x64px, 48x48px, 32x32px, 16x16px
 - **Hero Banners**: 1920x600px, 1920x1080px, 1600x900px
@@ -63,16 +85,60 @@ Cline will:
 - **Thumbnails**: 400x300px, 320x240px
 - **Posters**: 2400x3600px, 1920x2880px
 
+### High-Resolution Outputs (Nano Banana Pro):
+With models like Nano Banana Pro, you can request professional-grade high-resolution images:
+- **2K Images**: 2560x1440px, 2048x1536px
+- **4K Images**: 3840x2160px, 4096x2304px
+- **Ultra-wide**: 3440x1440px, 5120x1440px
+- **Print Quality**: Any dimension with "@300dpi" or "@600dpi" specification
+
 ### Resolution Specifications:
 You can also specify DPI/resolution for print-quality images:
 - "Generate a poster at 2400x3600px, 300dpi"
 - "Create a business card graphic, 1050x600px at 300dpi"
+- **For Nano Banana Pro**: "4K resolution banner at 3840x2160px, 300dpi"
 
 ### Aspect Ratio Control:
-If dimensions aren't critical, specify aspect ratios:
+If exact dimensions aren't critical, specify aspect ratios:
 - "16:9 aspect ratio for video thumbnail"
 - "1:1 square format for profile picture"
 - "4:3 landscape orientation"
+- "21:9 ultra-wide cinematic format"
+
+### Advanced Features with Nano Banana Pro
+
+When using Nano Banana Pro, you can request additional creative controls in your prompts:
+
+**Text Rendering in Images:**
+```
+"Generate a 1920x1080px infographic with the title 'AI Revolution 2025' 
+in bold sans-serif font at the top, and three bullet points below in 
+smaller text explaining key trends"
+```
+
+**Lighting and Focus:**
+```
+"Create a product photo at 2048x2048px with soft studio lighting from 
+the left, shallow depth of field focusing on the product in center"
+```
+
+**Multi-Element Compositions:**
+```
+"Generate a 3840x2160px banner featuring 3 product shots side by side, 
+maintaining consistent lighting and style across all products"
+```
+
+**Identity Preservation:**
+```
+"Create 5 variations of the company mascot character (512x512px each), 
+maintaining the same blue robot design with different poses"
+```
+
+**Camera Transformations:**
+```
+"Generate a 1920x1080px scene with a low-angle camera perspective, 
+wide-angle lens effect, professional photography style"
+```
 
 ## Supported Image Formats
 
@@ -181,11 +247,70 @@ Models are automatically flagged with `supportsImageGeneration: true` when:
 | **Icon Set** | 64x64px, 48x48px, 32x32px | PNG | "UI icon, 64x64px, flat design, single color..." |
 | **Mobile Splash** | 750x1334px (iOS), 1080x1920px (Android) | PNG | "App splash screen, 1080x1920px, brand colors..." |
 | **Print Poster** | 2400x3600px @ 300dpi | JPG/PNG | "Poster design, 2400x3600px at 300dpi, event theme..." |
+| **4K Banner** (Nano Banana Pro) | 3840x2160px | PNG | "4K resolution banner, 3840x2160px with text overlay..." |
+| **Infographic** (Nano Banana Pro) | 1200x3000px | PNG | "Vertical infographic, 1200x3000px with data visualization..." |
+
+## Nano Banana Pro Specific Examples
+
+### Example 1: Text-Rich Landing Page Banner
+```
+Create a landing page with a hero banner using Nano Banana Pro.
+Generate a 3840x2160px banner image with:
+- Large heading text "Welcome to the Future of AI" in modern sans-serif
+- Subheading "Transforming Industries Through Innovation" below it
+- Futuristic tech background with soft lighting
+- Company logo in the top-right corner
+```
+
+### Example 2: Multi-Product Showcase
+```
+Generate a product showcase image (2560x1440px) featuring 4 different 
+product shots arranged in a grid, maintaining consistent lighting and 
+perspective across all items. Include product names as text overlays 
+in clean typography.
+```
+
+### Example 3: Professional Infographic
+```
+Create a business infographic (1080x1920px vertical format) with:
+- Title: "2025 Market Trends" at the top in bold text
+- 5 sections with icons and statistical data
+- Each section should have a heading and 2-3 bullet points
+- Modern color scheme with data visualization elements
+- Use consistent typography throughout
+```
+
+### Example 4: Cinematic Composition
+```
+Generate a cinematic banner (5120x1440px ultra-wide) showing a futuristic 
+cityscape at dusk, with dramatic lighting from the setting sun, shallow 
+depth of field focusing on the foreground buildings, professional 
+photography style with film grain texture.
+```
 
 ## Limitations
 
+### General Limitations
 - Image generation quality depends on the model's capabilities
-- Some models may have specific prompt requirements
+- Generated images use API credits (check your provider's pricing)
+- Large or complex images may take longer to generate
+- The model must explicitly choose to use the tool (autonomous decision)
+
+### Model-Specific Capabilities
+
+**Nano Banana Pro Advantages:**
+- ✅ Support for 2K (2560x1440px) and 4K (3840x2160px) outputs
+- ✅ Advanced text rendering with multilingual support
+- ✅ Multi-image consistency and identity preservation
+- ✅ Fine-grained creative controls (lighting, focus, camera)
+- ✅ Search grounding for real-time information
+- ✅ Professional-grade design workflows
+
+**Other Models:**
+- May have lower maximum resolution limits
+- Text rendering in images may be less accurate
+- Limited multi-element composition capabilities
+- Fewer creative control options
 - Generated images use API credits (check your provider's pricing)
 - Large or complex images may take longer to generate
 - The model must explicitly choose to use the tool (autonomous decision)

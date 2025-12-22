@@ -249,23 +249,47 @@ export class OpenRouterHandler implements ApiHandler {
 				throw new Error("No response from image generation model")
 			}
 
-			// Check if the response contains image data
-			// OpenRouter might return image data in different formats depending on the model
-			// For now, we'll need to parse the response and extract image data
-			// This is a placeholder - the actual implementation depends on the specific model's response format
-			
-			// If the model returns a base64 encoded image in the text response
-			const base64Match = content.match(/data:image\/[^;]+;base64,([^\s]+)/)
-			if (base64Match) {
-				return Buffer.from(base64Match[1], "base64")
+			// Models may return image data in several formats:
+			// 1. Data URL with base64: data:image/png;base64,iVBORw0KGgo...
+			// 2. Just base64 string: iVBORw0KGgo...
+			// 3. URL to generated image (need to fetch)
+			// 4. Structured response with image field
+
+			// Try parsing as data URL (most common for inline image generation)
+			const dataUrlMatch = content.match(/data:image\/[^;]+;base64,([^\s\n\r]+)/i)
+			if (dataUrlMatch) {
+				const base64Data = dataUrlMatch[1]
+				return Buffer.from(base64Data, "base64")
 			}
 
-			// If the model returns just base64 without the data URL prefix
-			try {
-				return Buffer.from(content, "base64")
-			} catch (e) {
-				throw new Error(`Unable to extract image data from model response. Response: ${content.substring(0, 200)}...`)
+			// Try parsing as plain URL to an image (Gemini and some models might return this)
+			const urlMatch = content.match(/https?:\/\/[^\s\n\r]+\.(png|jpg|jpeg|webp)/i)
+			if (urlMatch) {
+				const imageUrl = urlMatch[0]
+				// Fetch the image from the URL
+				const imageResponse = await axios.get(imageUrl, {
+					responseType: "arraybuffer",
+					timeout: 30000,
+					...getAxiosSettings(),
+				})
+				return Buffer.from(imageResponse.data)
 			}
+
+			// Try parsing as raw base64 (some models return just the base64 string)
+			// Base64 strings should be relatively long and contain valid base64 characters
+			const cleanedContent = content.trim().replace(/[\s\n\r]/g, "")
+			if (cleanedContent.length > 100 && /^[A-Za-z0-9+/]+=*$/.test(cleanedContent)) {
+				try {
+					return Buffer.from(cleanedContent, "base64")
+				} catch (e) {
+					// Not valid base64, continue to error
+				}
+			}
+
+			// If we reach here, we couldn't parse the response
+			throw new Error(
+				`Unable to extract image data from model response. The model may not support image generation, or returned an unexpected format. Response preview: ${content.substring(0, 200)}...`
+			)
 		} catch (error: any) {
 			throw new Error(`Image generation failed: ${error.message}`)
 		}
