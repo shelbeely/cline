@@ -14,6 +14,8 @@ const GENERIC: ClineToolSpec = {
 - Returns the path to the saved image file
 - Use this tool when you need to create visual assets like logos, banners, icons, illustrations, or diagrams
 - The prompt should be detailed and descriptive for best results
+- IMPORTANT: Always specify desired dimensions and resolution in the prompt (e.g., "1920x1080px", "512x512px", "800x600px at 300dpi")
+- Include specific sizing requirements for proper image generation
 - The file path should end with an image extension (.png, .jpg, .jpeg, .webp)
 - If the file already exists, it will be overwritten
 - This tool is only available when using a model that supports image generation (check model capabilities)`,
@@ -22,8 +24,8 @@ const GENERIC: ClineToolSpec = {
 		{
 			name: "prompt",
 			required: true,
-			instruction: "A detailed description of the image to generate",
-			usage: "A modern minimalist logo featuring a stylized robot head in blue and white colors",
+			instruction: "A detailed description of the image to generate, including specific dimensions and resolution (e.g., 1920x1080px, 512x512px)",
+			usage: "A modern minimalist logo featuring a stylized robot head in blue and white colors, 512x512px",
 		},
 		{
 			name: "path",
@@ -39,13 +41,13 @@ const NATIVE_NEXT_GEN: ClineToolSpec = {
 	variant: ModelFamily.NATIVE_NEXT_GEN,
 	id: ClineDefaultTool.GENERATE_IMAGE,
 	name: "generate_image",
-	description: "Generates an image from a text prompt and saves it to a file.",
+	description: "Generates an image from a text prompt and saves it to a file. Always include specific dimensions in the prompt (e.g., 1920x1080px, 512x512px).",
 	contextRequirements: (context) => context.modelInfo.supportsImageGeneration === true,
 	parameters: [
 		{
 			name: "prompt",
 			required: true,
-			instruction: "Detailed description of the image to generate",
+			instruction: "Detailed description of the image including dimensions (e.g., 1920x1080px)",
 		},
 		{
 			name: "path",
