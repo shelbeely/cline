@@ -236,6 +236,7 @@ export interface ModelInfo {
 	maxTokens?: number
 	contextWindow?: number
 	supportsImages?: boolean
+	supportsImageGeneration?: boolean // Whether the model can generate images as output
 	supportsPromptCache: boolean // this value is hardcoded for now
 	supportsReasoning?: boolean // Whether the model supports reasoning/thinking mode
 	inputPrice?: number // Keep for non-tiered input models

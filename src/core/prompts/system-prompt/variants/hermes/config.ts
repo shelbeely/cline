@@ -53,6 +53,7 @@ export const config = createVariant(ModelFamily.HERMES)
 		ClineDefaultTool.MCP_DOCS,
 		ClineDefaultTool.TODO,
 		ClineDefaultTool.GENERATE_EXPLANATION,
+		ClineDefaultTool.GENERATE_IMAGE,
 	)
 	.placeholders({
 		MODEL_FAMILY: "hermes",

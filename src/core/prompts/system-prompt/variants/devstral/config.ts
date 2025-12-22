@@ -51,6 +51,7 @@ export const config = createVariant(ModelFamily.DEVSTRAL)
 		ClineDefaultTool.PLAN_MODE,
 		ClineDefaultTool.MCP_DOCS,
 		ClineDefaultTool.TODO,
+		ClineDefaultTool.GENERATE_IMAGE,
 	)
 	.placeholders({
 		MODEL_FAMILY: "devstral",

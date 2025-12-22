@@ -99,6 +99,7 @@ export async function refreshOpenRouterModels(controller: Controller): Promise<R
 					maxTokens: rawModel.top_provider?.max_completion_tokens ?? 0,
 					contextWindow: rawModel.context_length ?? 0,
 					supportsImages: rawModel.architecture?.modality?.includes("image") ?? false,
+					supportsImageGeneration: rawModel.architecture?.output_modalities?.includes("image") ?? false,
 					supportsPromptCache: false,
 					inputPrice: parsePrice(rawModel.pricing?.prompt) ?? 0,
 					outputPrice: parsePrice(rawModel.pricing?.completion) ?? 0,

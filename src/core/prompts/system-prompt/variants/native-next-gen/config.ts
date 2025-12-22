@@ -60,6 +60,7 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 		ClineDefaultTool.MCP_DOCS,
 		ClineDefaultTool.TODO,
 		ClineDefaultTool.GENERATE_EXPLANATION,
+		ClineDefaultTool.GENERATE_IMAGE,
 	)
 	.placeholders({
 		MODEL_FAMILY: ModelFamily.NATIVE_NEXT_GEN,

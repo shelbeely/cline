@@ -46,6 +46,7 @@ export const config = createVariant(ModelFamily.XS)
 		ClineDefaultTool.NEW_TASK,
 		ClineDefaultTool.PLAN_MODE,
 		ClineDefaultTool.GENERATE_EXPLANATION,
+		ClineDefaultTool.GENERATE_IMAGE,
 	)
 	.placeholders({
 		MODEL_FAMILY: ModelFamily.XS,
